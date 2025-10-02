@@ -1,0 +1,8 @@
+{
+    "name": "ppf/naricitas",
+    "description": "Sistema Naricitas en PHP con JWT y CRUD",
+    "license": "MIT",
+    "require-dev": {
+        "phpunit/phpunit": "^12"
+    }
+}
