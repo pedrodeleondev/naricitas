@@ -1,8 +1,6 @@
 <?php declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
-require_once __DIR__ . '/../src/conexion.php';
-
 final class PedidoTest extends TestCase
 {
     private function crearUsuarioDePrueba(PDO $pdo): int
@@ -19,6 +17,8 @@ final class PedidoTest extends TestCase
     public function testCrearPedidoEnPendiente(): void
     {
         $pdo = $GLOBALS['pdo'];
+        $this->assertInstanceOf(PDO::class, $pdo, "La conexión debe estar inicializada");
+
         $usuarioId = $this->crearUsuarioDePrueba($pdo);
 
         $stmt = $pdo->prepare("INSERT INTO pedidos (usuario_id,total,estado) VALUES (?,?,?)");
@@ -35,13 +35,15 @@ final class PedidoTest extends TestCase
     public function testCancelarPedido(): void
     {
         $pdo = $GLOBALS['pdo'];
+        $this->assertInstanceOf(PDO::class, $pdo, "La conexión debe estar inicializada");
+
         $usuarioId = $this->crearUsuarioDePrueba($pdo);
 
         $stmt = $pdo->prepare("INSERT INTO pedidos (usuario_id,total,estado) VALUES (?,?,?)");
         $stmt->execute([$usuarioId, 200, "pendiente"]);
         $pedidoId = $pdo->lastInsertId();
 
-        // cancelar pedido
+        // Cancelar pedido
         $stmt2 = $pdo->prepare("UPDATE pedidos SET estado='cancelado' WHERE id=? AND usuario_id=?");
         $stmt2->execute([$pedidoId, $usuarioId]);
 
