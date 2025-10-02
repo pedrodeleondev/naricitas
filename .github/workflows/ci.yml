@@ -24,7 +24,7 @@ jobs:
           --health-retries=10
 
     env:
-      DB_HOST: mysql
+      DB_HOST: 127.0.0.1
       DB_PORT: 3306
       DB_NAME: naricitas
       DB_USER: root
@@ -47,7 +47,7 @@ jobs:
       - name: Esperar a MySQL
         run: |
           for i in {1..20}; do
-            if mysqladmin ping -hmysql -uroot -proot --silent; then
+            if mysqladmin ping -h127.0.0.1 -uroot -proot --silent; then
               echo "MySQL listo"
               break
             fi
@@ -58,11 +58,11 @@ jobs:
       - name: Verificar MySQL
         run: |
           echo "Probando conexión a MySQL..."
-          mysql -hmysql -uroot -proot -e "SHOW DATABASES;"
+          mysql -h127.0.0.1 -uroot -proot -e "SHOW DATABASES;"
 
       - name: Crear esquema
         run: |
-          mysql -hmysql -P3306 -uroot -proot naricitas <<'EOF'
+          mysql -h127.0.0.1 -P3306 -uroot -proot naricitas <<'EOF'
           CREATE TABLE IF NOT EXISTS usuarios (
             id INT AUTO_INCREMENT PRIMARY KEY,
             nombre VARCHAR(100),
