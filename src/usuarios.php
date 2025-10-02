@@ -1,27 +1,21 @@
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-
 include "conexion.php";
 include "jwt.php";
-
 $usuario = null;
 if (isset($_COOKIE['token'])) {
     $usuario = validarJWT($_COOKIE['token'], $secret);
 }
-
 if(!$usuario || $usuario['rol']!=='admin'){
     header("Location: index.php");
     exit;
 }
-
 $msg = "";
 $showAlert = false;
-
-// --- ELIMINAR USUARIO ---
 if(isset($_POST['delete_id'])){
     $id = $_POST['delete_id'];
-    if($id != $usuario['id']){ // No puede eliminarse a sí mismo
+    if($id != $usuario['id']){
         $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id=?");
         $stmt->execute([$id]);
         $msg = "🗑️ Usuario eliminado correctamente.";
@@ -31,8 +25,6 @@ if(isset($_POST['delete_id'])){
         $showAlert = true;
     }
 }
-
-// --- LISTA DE USUARIOS ---
 $usuarios = $pdo->query("SELECT id,nombre,email,rol,creado_en FROM usuarios ORDER BY creado_en DESC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
@@ -44,7 +36,8 @@ $usuarios = $pdo->query("SELECT id,nombre,email,rol,creado_en FROM usuarios ORDE
 body{margin:0;font-family:sans-serif;background:#b87c4c;color:#fff;}
 main{padding:20px;}
 table{width:90%;margin:20px auto;border-collapse:collapse;background:#fff;color:#000;}
-th,td{padding:10px;border:1px solid #ccc;text-align:center;}
+th,td{padding:10px;border:1px solid #ccc;text-align:center;word-wrap:break-word;}
+td.email{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 button{padding:6px 10px;background:#c0392b;color:#fff;border:none;border-radius:4px;cursor:pointer;}
 button:hover{background:#96281b;}
 .alerta{position:fixed;bottom:20px;right:20px;background:#fff;color:#000;padding:15px;border-radius:8px;box-shadow:0px 4px 12px rgba(0,0,0,0.2);font-weight:bold;z-index:9999;animation:fadein 0.5s,fadeout 0.5s 3s;}
@@ -80,7 +73,7 @@ function confirmarEliminar(form){
         <tr>
             <td><?php echo $u['id']; ?></td>
             <td><?php echo htmlspecialchars($u['nombre']); ?></td>
-            <td><?php echo htmlspecialchars($u['email']); ?></td>
+            <td class="email" title="<?php echo htmlspecialchars($u['email']); ?>"><?php echo htmlspecialchars($u['email']); ?></td>
             <td><?php echo $u['rol']; ?></td>
             <td><?php echo $u['creado_en']; ?></td>
             <td>
@@ -97,8 +90,6 @@ function confirmarEliminar(form){
         <?php endforeach; ?>
     </table>
 </main>
-
-<!-- Mini alerta -->
 <?php if($showAlert): ?>
 <div class="alerta" id="alerta"><?php echo $msg; ?></div>
 <script>
