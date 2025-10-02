@@ -5,7 +5,6 @@ ini_set('display_errors', 1);
 include "conexion.php";
 include "jwt.php";
 
-// ---------------- FUNCIONES ----------------
 function eliminarPerrito($pdo, $id) {
     $stmt = $pdo->prepare("DELETE FROM perritos WHERE id=?");
     $stmt->execute([$id]);
@@ -24,16 +23,15 @@ function toggleAdopcion($pdo, $id) {
     return "🔄 Estado de adopción actualizado.";
 }
 
-function adoptarPerrito($pdo, $id, $nombre) {
-    $stmt = $pdo->prepare("UPDATE perritos SET adoptado=1 WHERE id=? AND adoptado=0");
-    $stmt->execute([$id]);
+function adoptarPerrito($pdo, $id, $nombre, $usuarioId) {
+    $stmt = $pdo->prepare("UPDATE perritos SET adoptado=1, adoptado_por=? WHERE id=? AND adoptado=0");
+    $stmt->execute([$usuarioId, $id]);
     if ($stmt->rowCount() > 0) {
         return "🎉 Felicidades, has adoptado a $nombre, pasa por tu nuev@ amig@ a nuestra sucursal 🐾";
     }
     return "⚠️ Este perrito ya fue adoptado.";
 }
 
-// ---------------- MAIN ----------------
 $usuario = null;
 if (isset($_COOKIE['token'])) {
     $usuario = validarJWT($_COOKIE['token'], $secret);
@@ -56,12 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $usuario) {
         $showAlert = true;
     }
     if ($usuario['rol'] === 'usuario' && isset($_POST['perrito_id'])) {
-        $msg = adoptarPerrito($pdo, $_POST['perrito_id'], $_POST['nombre']);
+        $msg = adoptarPerrito($pdo, $_POST['perrito_id'], $_POST['nombre'], $usuario['id']);
         $showAlert = true;
     }
 }
 
-// --- LISTA DE PERRITOS ---
 $perritos = $pdo->query("SELECT * FROM perritos ORDER BY creado_en DESC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
@@ -74,7 +71,7 @@ body{margin:0;font-family:sans-serif;background:#b87c4c;color:#fff;}
 main{padding:20px;}
 .perrito{background:#fff;color:#000;padding:15px;border-radius:8px;margin:15px;display:inline-block;width:250px;vertical-align:top;}
 .perrito img{width:100%;border-radius:5px;}
-button{padding:6px 10px;background:#5a3c1c;color:#fff;border:none;border-radius:4px;cursor:pointer;border-radius:5px;}
+button{padding:6px 10px;background:#5a3c1c;color:#fff;border:none;border-radius:4px;cursor:pointer;}
 button:hover{background:#3d2914;}
 form{margin-top:5px;}
 .admin-actions{display:flex;justify-content:space-between;margin-top:10px;}
@@ -102,6 +99,16 @@ button.delete:hover{background:#96281b;}
 
     <?php if($p['adoptado']): ?>
         <p style="color:green;font-weight:bold;">✅ Adoptado</p>
+        <?php if($usuario && $usuario['rol']==='admin' && $p['adoptado_por']): ?>
+            <?php 
+                $adoptante = $pdo->prepare("SELECT nombre FROM usuarios WHERE id=?");
+                $adoptante->execute([$p['adoptado_por']]);
+                $adoptante = $adoptante->fetch(PDO::FETCH_ASSOC);
+                if($adoptante){
+                    echo "<p><b>Adoptado por:</b> ".htmlspecialchars($adoptante['nombre'])."</p>";
+                }
+            ?>
+        <?php endif; ?>
     <?php elseif($usuario && $usuario['rol']==='usuario'): ?>
         <form method="post">
             <input type="hidden" name="perrito_id" value="<?php echo $p['id']; ?>">
@@ -110,14 +117,12 @@ button.delete:hover{background:#96281b;}
         </form>
     <?php endif; ?>
 
-    <!-- Opciones admin -->
     <?php if($usuario && $usuario['rol']==='admin'): ?>
         <form method="post">
             <input type="hidden" name="toggle_id" value="<?php echo $p['id']; ?>">
             <button type="submit">Cambiar estado adopción</button>
         </form>
 
-        <!-- Editar y Eliminar en la misma línea -->
         <form method="post">
             <input type="hidden" name="edit_id" value="<?php echo $p['id']; ?>">
             <input type="text" name="nombre" value="<?php echo htmlspecialchars($p['nombre']); ?>">
@@ -129,7 +134,6 @@ button.delete:hover{background:#96281b;}
             <input type="text" name="estado_salud" value="<?php echo htmlspecialchars($p['estado_salud']); ?>">
             <textarea name="historia"><?php echo htmlspecialchars($p['historia']); ?></textarea>
             <input type="text" name="foto" value="<?php echo htmlspecialchars($p['foto']); ?>">
-
             <div class="admin-actions">
                 <button type="submit">Actualizar</button>
         </form>
@@ -143,7 +147,6 @@ button.delete:hover{background:#96281b;}
 <?php endforeach; ?>
 </main>
 
-<!-- Mini alerta -->
 <?php if($showAlert): ?>
 <div class="alerta" id="alerta"><?php echo $msg; ?></div>
 <script>
