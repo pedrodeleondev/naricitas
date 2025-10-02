@@ -1,0 +1,100 @@
+name: CI/CD - Naricitas
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: naricitas
+        ports: [ "3306:3306" ]
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Instalar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_mysql
+          coverage: xdebug
+
+      - name: Instalar dependencias
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Esperar MySQL
+        run: sleep 20
+
+      - name: Crear esquema
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u root -proot -e "
+          CREATE DATABASE IF NOT EXISTS naricitas;
+          USE naricitas;
+          CREATE TABLE IF NOT EXISTS usuarios (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nombre VARCHAR(100),
+            email VARCHAR(150) UNIQUE,
+            password VARCHAR(255),
+            rol ENUM('usuario','admin') DEFAULT 'usuario',
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS pedidos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            usuario_id INT,
+            total DECIMAL(10,2),
+            estado VARCHAR(20) DEFAULT 'pendiente',
+            fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS productos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nombre VARCHAR(100),
+            descripcion TEXT,
+            imagen VARCHAR(255),
+            precio DECIMAL(10,2),
+            stock INT,
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE TABLE IF NOT EXISTS pedido_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            pedido_id INT,
+            producto_id INT,
+            cantidad INT,
+            precio_unitario DECIMAL(10,2)
+          );
+          CREATE TABLE IF NOT EXISTS campañas (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            titulo VARCHAR(255),
+            descripcion TEXT,
+            fecha_inicio DATE,
+            fecha_fin DATE
+          );
+          CREATE TABLE IF NOT EXISTS perritos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nombre VARCHAR(100),
+            edad VARCHAR(50),
+            sexo VARCHAR(20),
+            estado_salud VARCHAR(100),
+            historia TEXT,
+            foto VARCHAR(255),
+            adoptado TINYINT(1) DEFAULT 0,
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          "
+
+      - name: Ejecutar PHPUnit
+        run: vendor/bin/phpunit --coverage-text --colors=always
