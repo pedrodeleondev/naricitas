@@ -41,16 +41,21 @@ jobs:
         run: |
           for i in {1..20}; do
             if mysqladmin ping -h127.0.0.1 -uroot -proot --silent; then
-              echo "MySQL listo!"
+              echo "✅ MySQL listo!"
               break
             fi
-            echo "Esperando MySQL..."
+            echo "⏳ Esperando MySQL..."
             sleep 3
           done
 
+      - name: Verificar MySQL
+        run: |
+          echo "🔍 Probando conexión a MySQL..."
+          mysql -h127.0.0.1 -uroot -proot -e "SHOW DATABASES;"
+
       - name: Crear esquema
         run: |
-          mysql -h 127.0.0.1 -P 3306 -u root -proot naricitas <<'EOF'
+          mysql -h127.0.0.1 -P3306 -uroot -proot naricitas <<'EOF'
           CREATE TABLE IF NOT EXISTS usuarios (
             id INT AUTO_INCREMENT PRIMARY KEY,
             nombre VARCHAR(100),
