@@ -32,6 +32,12 @@ function adoptarPerrito($pdo, $id, $nombre, $usuarioId) {
     return "⚠️ Este perrito ya fue adoptado.";
 }
 
+function agregarPerrito($pdo, $data) {
+    $stmt = $pdo->prepare("INSERT INTO perritos (nombre, edad, sexo, estado_salud, historia, foto, adoptado, creado_en) VALUES (?,?,?,?,?,?,0,NOW())");
+    $stmt->execute([$data['nombre'], $data['edad'], $data['sexo'], $data['estado_salud'], $data['historia'], $data['foto']]);
+    return "🐶 Nuevo perrito agregado.";
+}
+
 $usuario = null;
 if (isset($_COOKIE['token'])) {
     $usuario = validarJWT($_COOKIE['token'], $secret);
@@ -55,6 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $usuario) {
     }
     if ($usuario['rol'] === 'usuario' && isset($_POST['perrito_id'])) {
         $msg = adoptarPerrito($pdo, $_POST['perrito_id'], $_POST['nombre'], $usuario['id']);
+        $showAlert = true;
+    }
+    if ($usuario['rol'] === 'admin' && isset($_POST['new_perrito'])) {
+        $msg = agregarPerrito($pdo, $_POST);
         $showAlert = true;
     }
 }
@@ -81,6 +91,9 @@ button.delete:hover{background:#96281b;}
 .alerta{position:fixed;bottom:20px;right:20px;background:#fff;color:#000;padding:15px;border-radius:8px;box-shadow:0px 4px 12px rgba(0,0,0,0.2);font-weight:bold;z-index:9999;animation:fadein 0.5s,fadeout 0.5s 3s;}
 @keyframes fadein{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 @keyframes fadeout{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(20px);}}
+.new-form{background:#fff;color:#000;padding:15px;border-radius:8px;margin:15px;}
+.new-form h3{margin-top:0;}
+.new-form input,.new-form select,.new-form textarea{display:block;width:100%;margin:5px 0;padding:5px;border:1px solid #ccc;border-radius:4px;}
 </style>
 </head>
 <body>
@@ -145,6 +158,26 @@ button.delete:hover{background:#96281b;}
     <?php endif; ?>
 </div>
 <?php endforeach; ?>
+
+<?php if($usuario && $usuario['rol']==='admin'): ?>
+<div class="new-form">
+    <h3>Agregar nuevo perrito 🐶</h3>
+    <form method="post">
+        <input type="hidden" name="new_perrito" value="1">
+        <input type="text" name="nombre" placeholder="Nombre" required>
+        <input type="text" name="edad" placeholder="Edad" required>
+        <select name="sexo">
+            <option>Macho</option>
+            <option>Hembra</option>
+        </select>
+        <input type="text" name="estado_salud" placeholder="Estado de salud" required>
+        <textarea name="historia" placeholder="Historia"></textarea>
+        <input type="text" name="foto" placeholder="URL de foto">
+        <button type="submit">Agregar</button>
+    </form>
+</div>
+<?php endif; ?>
+
 </main>
 
 <?php if($showAlert): ?>
